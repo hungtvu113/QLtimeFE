@@ -19,8 +19,8 @@ export default function TasksPage() {
       setIsLoading(true);
       setError(null);
 
-      // Kiểm tra xem có token không
-      const token = localStorage.getItem('authToken');
+      // Kiểm tra xem có token không (chỉ trên client)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
       if (token) {
         // Nếu có token, thử tải từ API
@@ -37,11 +37,15 @@ export default function TasksPage() {
 
       // Fallback to localStorage (cho guest users hoặc khi API lỗi)
       console.log('TasksPage: Đang tải tasks từ localStorage...');
-      const stored = localStorage.getItem('tasks');
-      if (stored) {
-        const localTasks = JSON.parse(stored);
-        console.log('TasksPage: Đã tải tasks từ localStorage:', localTasks);
-        setTasks(localTasks);
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('tasks');
+        if (stored) {
+          const localTasks = JSON.parse(stored);
+          console.log('TasksPage: Đã tải tasks từ localStorage:', localTasks);
+          setTasks(localTasks);
+        } else {
+          setTasks([]);
+        }
       } else {
         setTasks([]);
       }

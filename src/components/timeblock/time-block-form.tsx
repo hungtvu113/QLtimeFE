@@ -135,6 +135,7 @@ export function TimeBlockForm({ isOpen, onClose, onUpdate, date, timeBlock }: Ti
   };
   
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
@@ -246,5 +247,6 @@ export function TimeBlockForm({ isOpen, onClose, onUpdate, date, timeBlock }: Ti
       title="Yêu cầu đăng nhập"
       description="Bạn cần đăng nhập để tạo hoặc chỉnh sửa khối thời gian."
     />
+    </>
   );
 }

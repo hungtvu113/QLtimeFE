@@ -30,8 +30,8 @@ export default function CalendarPage() {
       setError(null);
       console.log('CalendarPage: Đang tải dữ liệu lịch...');
 
-      // Kiểm tra xem có token không
-      const token = localStorage.getItem('authToken');
+      // Kiểm tra xem có token không (chỉ trên client)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       let fetchedTasks: Task[] = [];
       let fetchedTimeBlocks: TimeBlock[] = [];
 
@@ -55,11 +55,16 @@ export default function CalendarPage() {
       } else {
         // Fallback to localStorage cho guest users
         console.log('CalendarPage: Đang tải dữ liệu từ localStorage...');
-        const storedTasks = localStorage.getItem('tasks');
-        const storedTimeBlocks = localStorage.getItem('timeBlocks');
+        if (typeof window !== 'undefined') {
+          const storedTasks = localStorage.getItem('tasks');
+          const storedTimeBlocks = localStorage.getItem('timeBlocks');
 
-        fetchedTasks = storedTasks ? JSON.parse(storedTasks) : [];
-        fetchedTimeBlocks = storedTimeBlocks ? JSON.parse(storedTimeBlocks) : [];
+          fetchedTasks = storedTasks ? JSON.parse(storedTasks) : [];
+          fetchedTimeBlocks = storedTimeBlocks ? JSON.parse(storedTimeBlocks) : [];
+        } else {
+          fetchedTasks = [];
+          fetchedTimeBlocks = [];
+        }
       }
 
       setTasks(fetchedTasks);
@@ -152,7 +157,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Authentication status alert */}
-        {!localStorage.getItem('authToken') && (
+        {typeof window !== 'undefined' && !localStorage.getItem('authToken') && (
           <div className="px-4 md:px-6 pb-4">
             <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
               <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />

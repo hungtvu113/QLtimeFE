@@ -151,8 +151,8 @@ export function TaskList({
     ));
   };
   
-  // Kiểm tra trạng thái authentication
-  const isAuthenticated = !!localStorage.getItem('authToken');
+  // Kiểm tra trạng thái authentication (chỉ trên client)
+  const isAuthenticated = typeof window !== 'undefined' ? !!localStorage.getItem('authToken') : false;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

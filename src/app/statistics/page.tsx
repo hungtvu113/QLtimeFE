@@ -41,8 +41,8 @@ export default function StatisticsPage() {
         endDate: dateRange.endDate || undefined,
       };
 
-      // Kiểm tra xem có token không
-      const token = localStorage.getItem('authToken');
+      // Kiểm tra xem có token không (chỉ trên client)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
       if (token) {
         // Nếu có token, thử tải từ API
@@ -65,12 +65,13 @@ export default function StatisticsPage() {
 
       // Fallback to localStorage (cho guest users hoặc khi API lỗi)
       console.log('StatisticsPage: Đang tải thống kê từ localStorage...');
-      const localTasks = localStorage.getItem('tasks');
-      const localTimeBlocks = localStorage.getItem('timeBlocks');
+      if (typeof window !== 'undefined') {
+        const localTasks = localStorage.getItem('tasks');
+        const localTimeBlocks = localStorage.getItem('timeBlocks');
 
-      if (localTasks || localTimeBlocks) {
-        const tasks = localTasks ? JSON.parse(localTasks) : [];
-        const timeBlocks = localTimeBlocks ? JSON.parse(localTimeBlocks) : [];
+        if (localTasks || localTimeBlocks) {
+          const tasks = localTasks ? JSON.parse(localTasks) : [];
+          const timeBlocks = localTimeBlocks ? JSON.parse(localTimeBlocks) : [];
 
         // Tạo thống kê cơ bản từ dữ liệu local
         const totalTasks = tasks.length;
@@ -79,38 +80,38 @@ export default function StatisticsPage() {
         const completedTimeBlocks = timeBlocks.filter((tb: any) => tb.isCompleted).length;
 
         setTaskStats({
-          totalTasks,
-          completedTasks,
-          pendingTasks: totalTasks - completedTasks,
-          overdueTasks: 0, // Khó tính toán từ localStorage
-          tasksByPriority: { high: 0, medium: 0, low: 0 },
-          tasksByCategory: {},
-          completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+          total: totalTasks,
+          completed: completedTasks,
+          pending: totalTasks - completedTasks,
+          overdue: 0, // Khó tính toán từ localStorage
+          byPriority: { high: 0, medium: 0, low: 0 },
+          byStatus: { backlog: 0, todo: 0, doing: 0, done: completedTasks },
+          byCategory: {},
         });
 
         setTimeBlockStats({
-          totalTimeBlocks,
-          completedTimeBlocks,
-          pendingTimeBlocks: totalTimeBlocks - completedTimeBlocks,
-          totalPlannedHours: 0, // Khó tính toán từ localStorage
-          totalCompletedHours: 0,
-          averageBlockDuration: 0,
+          totalHours: 0, // Khó tính toán từ localStorage
+          completedHours: 0,
           completionRate: totalTimeBlocks > 0 ? (completedTimeBlocks / totalTimeBlocks) * 100 : 0,
+          byDay: {},
         });
 
         setProductivityStats({
           productivityScore: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
           taskCompletionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
           timeBlockCompletionRate: totalTimeBlocks > 0 ? (completedTimeBlocks / totalTimeBlocks) * 100 : 0,
-          averageTasksPerDay: 0,
-          averageTimeBlocksPerDay: 0,
-          focusTime: 0,
-          breakTime: 0,
+          dailyScores: {},
         });
 
-        console.log('StatisticsPage: Đã tải thống kê từ localStorage thành công');
+          console.log('StatisticsPage: Đã tải thống kê từ localStorage thành công');
+        } else {
+          // Không có dữ liệu local
+          setTaskStats(null);
+          setTimeBlockStats(null);
+          setProductivityStats(null);
+        }
       } else {
-        // Không có dữ liệu
+        // Server-side rendering - không có dữ liệu
         setTaskStats(null);
         setTimeBlockStats(null);
         setProductivityStats(null);
@@ -212,7 +213,7 @@ export default function StatisticsPage() {
         </div>
 
         {/* Authentication status alert */}
-        {!localStorage.getItem('authToken') && (
+        {typeof window !== 'undefined' && !localStorage.getItem('authToken') && (
           <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
             <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <AlertDescription className="text-blue-800 dark:text-blue-200">

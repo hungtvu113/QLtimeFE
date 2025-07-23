@@ -178,6 +178,7 @@ export function TaskForm({ isOpen, onClose, onAdded, task }: TaskFormProps) {
   };
   
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px] backdrop-blur-sm border border-border/40 bg-background/90">
         <DialogHeader>
@@ -368,5 +369,6 @@ export function TaskForm({ isOpen, onClose, onAdded, task }: TaskFormProps) {
       title="Yêu cầu đăng nhập"
       description="Bạn cần đăng nhập để tạo hoặc chỉnh sửa công việc."
     />
+    </>
   );
 }

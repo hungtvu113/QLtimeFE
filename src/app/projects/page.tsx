@@ -36,8 +36,8 @@ export default function ProjectsPage() {
       setError(null);
       console.log('ProjectsPage: Đang tải projects...');
 
-      // Kiểm tra xem có token không
-      const token = localStorage.getItem('authToken');
+      // Kiểm tra xem có token không (chỉ trên client)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       let fetchedProjects: Project[] = [];
 
       if (token) {
@@ -54,8 +54,12 @@ export default function ProjectsPage() {
       } else {
         // Fallback to localStorage cho guest users
         console.log('ProjectsPage: Đang tải projects từ localStorage...');
-        const stored = localStorage.getItem('projects');
-        fetchedProjects = stored ? JSON.parse(stored) : [];
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('projects');
+          fetchedProjects = stored ? JSON.parse(stored) : [];
+        } else {
+          fetchedProjects = [];
+        }
       }
 
       setProjects(fetchedProjects);
@@ -191,7 +195,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Authentication status alert */}
-        {!localStorage.getItem('authToken') && (
+        {typeof window !== 'undefined' && !localStorage.getItem('authToken') && (
           <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
             <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <AlertDescription className="text-blue-800 dark:text-blue-200">
