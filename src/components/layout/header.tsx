@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { LogOut, User, Settings, BarChart3, UserCircle } from "lucide-react";
+import { LogOut, User, Settings, BarChart3, UserCircle, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ApiService } from "@/lib/services/api-service";
@@ -20,18 +20,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AuthDialog } from "@/components/auth/auth-dialog";
 
 export function Header() {
   const router = useRouter();
   const [user, setUser] = React.useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(false);
+  const [showAuthDialog, setShowAuthDialog] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     const fetchUser = async () => {
       try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          setIsAuthenticated(false);
+          setUser(null);
+          return;
+        }
+
         const userData = await ApiService.auth.getCurrentUser();
         setUser(userData);
+        setIsAuthenticated(true);
       } catch (error) {
         console.error('Lỗi lấy thông tin user:', error);
+        setIsAuthenticated(false);
+        setUser(null);
+        localStorage.removeItem('authToken');
       }
     };
 
@@ -42,7 +56,9 @@ export function Header() {
 
   const handleLogout = () => {
     ApiService.auth.logout();
-    router.push('/login');
+    setIsAuthenticated(false);
+    setUser(null);
+    router.push('/');
   };
 
   const handleProfile = () => {
@@ -55,6 +71,21 @@ export function Header() {
 
   const handleStatistics = () => {
     router.push('/statistics');
+  };
+
+  const handleLogin = () => {
+    setShowAuthDialog(true);
+  };
+
+  const handleAuthSuccess = async () => {
+    // Refresh user data after successful login
+    try {
+      const userData = await ApiService.auth.getCurrentUser();
+      setUser(userData);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Lỗi lấy thông tin user sau khi đăng nhập:', error);
+    }
   };
 
   // Tạo initials từ tên user
@@ -75,21 +106,21 @@ export function Header() {
         </div>
         
         <div className="flex items-center gap-2">
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative h-8 w-8 rounded-full hover:bg-background/80 transition-colors"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatar} alt={user?.name || 'User'} />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {user?.name ? getInitials(user.name) : <UserCircle className="h-4 w-4" />}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full hover:bg-background/80 transition-colors"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatar} alt={user?.name || 'User'} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {user?.name ? getInitials(user.name) : <UserCircle className="h-4 w-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-56 backdrop-blur-sm border border-border/40 bg-background/90 shadow-lg animate-in fade-in-0 zoom-in-95"
               align="end"
@@ -138,8 +169,38 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogin}
+                      className="hover:bg-background/80 transition-colors"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Đăng nhập
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Đăng nhập để sử dụng đầy đủ tính năng</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </div>
       </div>
+
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        onSuccess={handleAuthSuccess}
+        title="Đăng nhập vào QLTime"
+        description="Đăng nhập để sử dụng đầy đủ các tính năng quản lý thời gian."
+      />
     </header>
   );
-} 
+}

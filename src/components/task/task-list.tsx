@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { PlusCircle, Search, Filter, Loader2, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 interface TaskListProps {
   tasks?: Task[];
@@ -150,6 +151,9 @@ export function TaskList({
     ));
   };
   
+  // Kiểm tra trạng thái authentication
+  const isAuthenticated = !!localStorage.getItem('authToken');
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -159,6 +163,16 @@ export function TaskList({
           Thêm công việc
         </Button>
       </div>
+
+      {/* Thông báo trạng thái authentication */}
+      {!isAuthenticated && (
+        <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            Bạn đang xem ở chế độ khách. Đăng nhập để đồng bộ dữ liệu và sử dụng đầy đủ tính năng.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Công cụ tìm kiếm và lọc */}
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">

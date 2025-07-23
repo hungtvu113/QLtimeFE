@@ -14,7 +14,7 @@ import { ProjectService } from "@/lib/services/project-service";
 import { TaskService } from "@/lib/services/task-service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RefreshCw, AlertCircle, Plus, Loader2 } from "lucide-react";
+import { RefreshCw, AlertCircle, Plus, Loader2, Info } from "lucide-react";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -29,20 +29,41 @@ export default function ProjectsPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [editProject, setEditProject] = useState<Project | null>(null);
 
-  // Load projects từ API
+  // Load projects từ API hoặc localStorage
   const loadProjects = async () => {
     try {
       setLoading(true);
       setError(null);
       console.log('ProjectsPage: Đang tải projects...');
 
-      const fetchedProjects = await ProjectService.getProjects();
-      setProjects(fetchedProjects);
+      // Kiểm tra xem có token không
+      const token = localStorage.getItem('authToken');
+      let fetchedProjects: Project[] = [];
 
+      if (token) {
+        // Nếu có token, thử tải từ API
+        try {
+          fetchedProjects = await ProjectService.getProjects();
+          console.log('ProjectsPage: Đã tải projects từ API:', fetchedProjects.length);
+        } catch (apiError: any) {
+          console.warn('ProjectsPage: API lỗi, fallback to localStorage:', apiError);
+          // Fallback to localStorage
+          const stored = localStorage.getItem('projects');
+          fetchedProjects = stored ? JSON.parse(stored) : [];
+        }
+      } else {
+        // Fallback to localStorage cho guest users
+        console.log('ProjectsPage: Đang tải projects từ localStorage...');
+        const stored = localStorage.getItem('projects');
+        fetchedProjects = stored ? JSON.parse(stored) : [];
+      }
+
+      setProjects(fetchedProjects);
       console.log('ProjectsPage: Đã tải projects thành công:', fetchedProjects.length);
     } catch (err: any) {
       console.error('ProjectsPage: Lỗi khi tải projects:', err);
       setError(err.message || 'Không thể tải danh sách dự án');
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -168,6 +189,16 @@ export default function ProjectsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Authentication status alert */}
+        {!localStorage.getItem('authToken') && (
+          <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              Bạn đang xem ở chế độ khách. Đăng nhập để đồng bộ dữ liệu và sử dụng đầy đủ tính năng.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Error Alert */}
         {error && (

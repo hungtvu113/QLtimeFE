@@ -32,6 +32,8 @@ import { AIService } from '@/lib/services/ai-service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useStatisticsRefresh } from '@/lib/contexts/statistics-context';
+import { useAuthAction } from '@/lib/hooks/use-auth-action';
+import { AuthDialog } from '@/components/auth/auth-dialog';
 
 interface TaskFormProps {
   isOpen: boolean;
@@ -42,6 +44,7 @@ interface TaskFormProps {
 
 export function TaskForm({ isOpen, onClose, onAdded, task }: TaskFormProps) {
   const refreshStatistics = useStatisticsRefresh();
+  const { executeWithAuth, showAuthDialog, setShowAuthDialog } = useAuthAction();
   const [isLoading, setIsLoading] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
@@ -94,39 +97,42 @@ export function TaskForm({ isOpen, onClose, onAdded, task }: TaskFormProps) {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setSaveError(null);
-    
-    try {
-      const taskData = {
-        title,
-        description,
-        dueDate: dueDate ? dueDate.toISOString() : undefined,
-        priority,
-        category: category === 'none' ? undefined : category,
-        completed: task?.completed || false,
-      };
-      
-      let updatedTask: Task;
-      
-      if (task) {
-        updatedTask = await TaskService.updateTask(task.id, taskData);
-      } else {
-        updatedTask = await TaskService.createTask(taskData);
+
+    await executeWithAuth(async () => {
+      setIsLoading(true);
+      setSaveError(null);
+
+      try {
+        const taskData = {
+          title,
+          description,
+          dueDate: dueDate ? dueDate.toISOString() : undefined,
+          priority,
+          category: category === 'none' ? undefined : category,
+          completed: task?.completed || false,
+        };
+
+        let updatedTask: Task;
+
+        if (task) {
+          updatedTask = await TaskService.updateTask(task.id, taskData);
+        } else {
+          updatedTask = await TaskService.createTask(taskData);
+        }
+
+        if (onAdded) onAdded(updatedTask);
+
+        // Trigger statistics refresh
+        refreshStatistics();
+
+        onClose();
+      } catch (error) {
+        console.error('Lỗi khi lưu task:', error);
+        setSaveError('Không thể lưu công việc. Vui lòng thử lại sau.');
+      } finally {
+        setIsLoading(false);
       }
-      
-      if (onAdded) onAdded(updatedTask);
-
-      // Trigger statistics refresh
-      refreshStatistics();
-
-      onClose();
-    } catch (error) {
-      console.error('Lỗi khi lưu task:', error);
-      setSaveError('Không thể lưu công việc. Vui lòng thử lại sau.');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
   
   // Hàm xử lý gợi ý từ AI
@@ -355,5 +361,12 @@ export function TaskForm({ isOpen, onClose, onAdded, task }: TaskFormProps) {
         </form>
       </DialogContent>
     </Dialog>
+
+    <AuthDialog
+      open={showAuthDialog}
+      onOpenChange={setShowAuthDialog}
+      title="Yêu cầu đăng nhập"
+      description="Bạn cần đăng nhập để tạo hoặc chỉnh sửa công việc."
+    />
   );
 }

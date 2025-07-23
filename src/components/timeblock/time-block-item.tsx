@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/tooltip';
 import { Edit, Trash2, Clock, LinkIcon, Loader2 } from 'lucide-react';
 import { TimeBlockForm } from './time-block-form';
+import { useAuthAction } from '@/lib/hooks/use-auth-action';
+import { AuthDialog } from '@/components/auth/auth-dialog';
 
 interface TimeBlockItemProps {
   timeBlock: TimeBlock;
@@ -24,6 +26,7 @@ interface TimeBlockItemProps {
 }
 
 export function TimeBlockItem({ timeBlock, onUpdate }: TimeBlockItemProps) {
+  const { executeWithAuth, showAuthDialog, setShowAuthDialog } = useAuthAction();
   const [isLoading, setIsLoading] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [linkedTask, setLinkedTask] = useState<Task | undefined>(undefined);
@@ -56,29 +59,33 @@ export function TimeBlockItem({ timeBlock, onUpdate }: TimeBlockItemProps) {
   }, [timeBlock.taskId]);
   
   const handleToggleComplete = async () => {
-    setIsLoading(true);
-    try {
-      console.log('TimeBlockItem: Toggling completion for:', timeBlock.id, 'current:', timeBlock.isCompleted);
-      console.log('TimeBlockItem: Calling toggleCompletion with id:', timeBlock.id, 'newValue:', !timeBlock.isCompleted);
-      await ApiService.timeBlocks.toggleCompletion(timeBlock.id, !timeBlock.isCompleted);
-      onUpdate();
-    } catch (error) {
-      console.error('Lỗi khi cập nhật khối thời gian:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await executeWithAuth(async () => {
+      setIsLoading(true);
+      try {
+        console.log('TimeBlockItem: Toggling completion for:', timeBlock.id, 'current:', timeBlock.isCompleted);
+        console.log('TimeBlockItem: Calling toggleCompletion with id:', timeBlock.id, 'newValue:', !timeBlock.isCompleted);
+        await ApiService.timeBlocks.toggleCompletion(timeBlock.id, !timeBlock.isCompleted);
+        onUpdate();
+      } catch (error) {
+        console.error('Lỗi khi cập nhật khối thời gian:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    });
   };
   
   const handleDelete = async () => {
-    setIsLoading(true);
-    try {
-      await TimeBlockService.deleteTimeBlock(timeBlock.id);
-      onUpdate();
-    } catch (error) {
-      console.error('Lỗi khi xóa khối thời gian:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await executeWithAuth(async () => {
+      setIsLoading(true);
+      try {
+        await TimeBlockService.deleteTimeBlock(timeBlock.id);
+        onUpdate();
+      } catch (error) {
+        console.error('Lỗi khi xóa khối thời gian:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    });
   };
   
   // Tính thời gian
@@ -200,6 +207,13 @@ export function TimeBlockItem({ timeBlock, onUpdate }: TimeBlockItemProps) {
         onUpdate={onUpdate}
         date={new Date(timeBlock.startTime)}
         timeBlock={timeBlock}
+      />
+
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        title="Yêu cầu đăng nhập"
+        description="Bạn cần đăng nhập để thực hiện thao tác này."
       />
     </>
   );

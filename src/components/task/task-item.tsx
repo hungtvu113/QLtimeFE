@@ -18,6 +18,8 @@ import { Edit, Trash2, CalendarClock, Tag, Loader2 } from 'lucide-react';
 import { TaskForm } from './task-form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { useStatisticsRefresh } from '@/lib/contexts/statistics-context';
+import { useAuthAction } from '@/lib/hooks/use-auth-action';
+import { AuthDialog } from '@/components/auth/auth-dialog';
 
 interface TaskItemProps {
   task: Task;
@@ -27,6 +29,7 @@ interface TaskItemProps {
 
 export function TaskItem({ task: initialTask, onDelete, onUpdate }: TaskItemProps) {
   const refreshStatistics = useStatisticsRefresh();
+  const { executeWithAuth, showAuthDialog, setShowAuthDialog } = useAuthAction();
   // Thêm state để theo dõi trạng thái của task bên trong component
   const [task, setTask] = useState<Task>(initialTask);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,55 +90,59 @@ export function TaskItem({ task: initialTask, onDelete, onUpdate }: TaskItemProp
   };
   
   const handleToggleComplete = async () => {
-    setIsLoading(true);
-    try {
-      // Lấy ID từ task.id hoặc task._id
-      const taskId = task.id || (task as any)._id;
-      console.log('TaskItem: Toggle completion for task:', task);
-      console.log('TaskItem: Task ID:', taskId);
+    await executeWithAuth(async () => {
+      setIsLoading(true);
+      try {
+        // Lấy ID từ task.id hoặc task._id
+        const taskId = task.id || (task as any)._id;
+        console.log('TaskItem: Toggle completion for task:', task);
+        console.log('TaskItem: Task ID:', taskId);
 
-      if (!taskId) {
-        throw new Error('Không tìm thấy ID của công việc');
+        if (!taskId) {
+          throw new Error('Không tìm thấy ID của công việc');
+        }
+
+        // Gọi API để cập nhật trạng thái hoàn thành
+        const updatedTask = await TaskService.toggleTaskCompletion(taskId);
+
+        // Cập nhật trạng thái local để UI cập nhật ngay lập tức
+        setTask(updatedTask);
+
+        // Thông báo cho parent component để cập nhật danh sách
+        if (onUpdate) {
+          onUpdate(updatedTask);
+        }
+
+        // Trigger statistics refresh
+        refreshStatistics();
+      } catch (error) {
+        console.error('TaskItem: Lỗi khi cập nhật task:', error);
+      } finally {
+        setIsLoading(false);
       }
-
-      // Gọi API để cập nhật trạng thái hoàn thành
-      const updatedTask = await TaskService.toggleTaskCompletion(taskId);
-
-      // Cập nhật trạng thái local để UI cập nhật ngay lập tức
-      setTask(updatedTask);
-
-      // Thông báo cho parent component để cập nhật danh sách
-      if (onUpdate) {
-        onUpdate(updatedTask);
-      }
-
-      // Trigger statistics refresh
-      refreshStatistics();
-    } catch (error) {
-      console.error('TaskItem: Lỗi khi cập nhật task:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
   
   const [showConfirm, setShowConfirm] = useState(false);
   const handleDelete = async () => {
-    setIsLoading(true);
-    try {
-      // Xóa task qua API
-      await TaskService.deleteTask(task.id);
+    await executeWithAuth(async () => {
+      setIsLoading(true);
+      try {
+        // Xóa task qua API
+        await TaskService.deleteTask(task.id);
 
-      // Trigger statistics refresh
-      refreshStatistics();
+        // Trigger statistics refresh
+        refreshStatistics();
 
-      // Gọi callback để cha cập nhật state
-      onDelete(task.id);
-    } catch (error) {
-      console.error('Lỗi khi xóa task:', error);
-    } finally {
-      setIsLoading(false);
-      setShowConfirm(false);
-    }
+        // Gọi callback để cha cập nhật state
+        onDelete(task.id);
+      } catch (error) {
+        console.error('Lỗi khi xóa task:', error);
+      } finally {
+        setIsLoading(false);
+        setShowConfirm(false);
+      }
+    });
   };
 
   // Cập nhật task từ form edit
@@ -283,6 +290,13 @@ export function TaskItem({ task: initialTask, onDelete, onUpdate }: TaskItemProp
         onClose={() => setIsEditDialogOpen(false)}
         task={task}
         onAdded={handleTaskUpdated}
+      />
+
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        title="Yêu cầu đăng nhập"
+        description="Bạn cần đăng nhập để thực hiện thao tác này."
       />
     </>
   );

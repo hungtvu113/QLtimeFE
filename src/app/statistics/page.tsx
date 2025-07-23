@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, Calendar } from 'lucide-react';
+import { RefreshCw, Calendar, Info } from 'lucide-react';
 
 export default function StatisticsPage() {
   const { refreshTrigger } = useStatistics();
@@ -29,7 +29,7 @@ export default function StatisticsPage() {
     endDate: '',
   });
 
-  // Load statistics từ API
+  // Load statistics từ API hoặc localStorage
   const loadStatistics = async () => {
     try {
       setLoading(true);
@@ -41,17 +41,80 @@ export default function StatisticsPage() {
         endDate: dateRange.endDate || undefined,
       };
 
-      const [tasks, timeBlocks, productivity] = await Promise.all([
-        StatisticsService.getTaskStatistics(query),
-        StatisticsService.getTimeBlockStatistics(query),
-        StatisticsService.getProductivityStatistics(query),
-      ]);
+      // Kiểm tra xem có token không
+      const token = localStorage.getItem('authToken');
 
-      setTaskStats(tasks);
-      setTimeBlockStats(timeBlocks);
-      setProductivityStats(productivity);
+      if (token) {
+        // Nếu có token, thử tải từ API
+        try {
+          const [tasks, timeBlocks, productivity] = await Promise.all([
+            StatisticsService.getTaskStatistics(query),
+            StatisticsService.getTimeBlockStatistics(query),
+            StatisticsService.getProductivityStatistics(query),
+          ]);
 
-      console.log('StatisticsPage: Đã tải thống kê thành công');
+          setTaskStats(tasks);
+          setTimeBlockStats(timeBlocks);
+          setProductivityStats(productivity);
+          console.log('StatisticsPage: Đã tải thống kê từ API thành công');
+          return;
+        } catch (apiError: any) {
+          console.warn('StatisticsPage: API lỗi, fallback to localStorage:', apiError);
+        }
+      }
+
+      // Fallback to localStorage (cho guest users hoặc khi API lỗi)
+      console.log('StatisticsPage: Đang tải thống kê từ localStorage...');
+      const localTasks = localStorage.getItem('tasks');
+      const localTimeBlocks = localStorage.getItem('timeBlocks');
+
+      if (localTasks || localTimeBlocks) {
+        const tasks = localTasks ? JSON.parse(localTasks) : [];
+        const timeBlocks = localTimeBlocks ? JSON.parse(localTimeBlocks) : [];
+
+        // Tạo thống kê cơ bản từ dữ liệu local
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter((t: any) => t.completed).length;
+        const totalTimeBlocks = timeBlocks.length;
+        const completedTimeBlocks = timeBlocks.filter((tb: any) => tb.isCompleted).length;
+
+        setTaskStats({
+          totalTasks,
+          completedTasks,
+          pendingTasks: totalTasks - completedTasks,
+          overdueTasks: 0, // Khó tính toán từ localStorage
+          tasksByPriority: { high: 0, medium: 0, low: 0 },
+          tasksByCategory: {},
+          completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+        });
+
+        setTimeBlockStats({
+          totalTimeBlocks,
+          completedTimeBlocks,
+          pendingTimeBlocks: totalTimeBlocks - completedTimeBlocks,
+          totalPlannedHours: 0, // Khó tính toán từ localStorage
+          totalCompletedHours: 0,
+          averageBlockDuration: 0,
+          completionRate: totalTimeBlocks > 0 ? (completedTimeBlocks / totalTimeBlocks) * 100 : 0,
+        });
+
+        setProductivityStats({
+          productivityScore: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+          taskCompletionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+          timeBlockCompletionRate: totalTimeBlocks > 0 ? (completedTimeBlocks / totalTimeBlocks) * 100 : 0,
+          averageTasksPerDay: 0,
+          averageTimeBlocksPerDay: 0,
+          focusTime: 0,
+          breakTime: 0,
+        });
+
+        console.log('StatisticsPage: Đã tải thống kê từ localStorage thành công');
+      } else {
+        // Không có dữ liệu
+        setTaskStats(null);
+        setTimeBlockStats(null);
+        setProductivityStats(null);
+      }
     } catch (err: any) {
       console.error('StatisticsPage: Lỗi tải thống kê:', err);
       setError(err.message || 'Không thể tải dữ liệu thống kê');
@@ -147,6 +210,16 @@ export default function StatisticsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Authentication status alert */}
+        {!localStorage.getItem('authToken') && (
+          <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              Bạn đang xem ở chế độ khách. Đăng nhập để đồng bộ dữ liệu và sử dụng đầy đủ tính năng.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Hiển thị lỗi nếu có */}
         {error && (

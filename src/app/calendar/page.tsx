@@ -11,7 +11,7 @@ import { CalendarService, CalendarEvent } from '@/lib/services/calendar-service'
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle, Trash2, CheckCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, Trash2, CheckCircle, Info } from 'lucide-react';
 import { cleanupInvalidTimeBlocks } from '@/lib/utils/cleanup-utils';
 
 export default function CalendarPage() {
@@ -23,18 +23,44 @@ export default function CalendarPage() {
   const [cleanupLoading, setCleanupLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load calendar data từ API
+  // Load calendar data từ API hoặc localStorage
   const loadCalendarData = async () => {
     try {
       setLoading(true);
       setError(null);
       console.log('CalendarPage: Đang tải dữ liệu lịch...');
 
-      // Load tasks và time blocks song song
-      const [fetchedTasks, fetchedTimeBlocks] = await Promise.all([
-        TaskService.getTasks(),
-        TimeBlockService.getTimeBlocks(),
-      ]);
+      // Kiểm tra xem có token không
+      const token = localStorage.getItem('authToken');
+      let fetchedTasks: Task[] = [];
+      let fetchedTimeBlocks: TimeBlock[] = [];
+
+      if (token) {
+        // Nếu có token, thử tải từ API
+        try {
+          [fetchedTasks, fetchedTimeBlocks] = await Promise.all([
+            TaskService.getTasks(),
+            TimeBlockService.getTimeBlocks(),
+          ]);
+          console.log('CalendarPage: Đã tải dữ liệu từ API');
+        } catch (apiError: any) {
+          console.warn('CalendarPage: API lỗi, fallback to localStorage:', apiError);
+          // Fallback to localStorage
+          const storedTasks = localStorage.getItem('tasks');
+          const storedTimeBlocks = localStorage.getItem('timeBlocks');
+
+          fetchedTasks = storedTasks ? JSON.parse(storedTasks) : [];
+          fetchedTimeBlocks = storedTimeBlocks ? JSON.parse(storedTimeBlocks) : [];
+        }
+      } else {
+        // Fallback to localStorage cho guest users
+        console.log('CalendarPage: Đang tải dữ liệu từ localStorage...');
+        const storedTasks = localStorage.getItem('tasks');
+        const storedTimeBlocks = localStorage.getItem('timeBlocks');
+
+        fetchedTasks = storedTasks ? JSON.parse(storedTasks) : [];
+        fetchedTimeBlocks = storedTimeBlocks ? JSON.parse(storedTimeBlocks) : [];
+      }
 
       setTasks(fetchedTasks);
       setTimeBlocks(fetchedTimeBlocks);
@@ -124,6 +150,18 @@ export default function CalendarPage() {
             </Button>
           </div>
         </div>
+
+        {/* Authentication status alert */}
+        {!localStorage.getItem('authToken') && (
+          <div className="px-4 md:px-6 pb-4">
+            <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
+                Bạn đang xem ở chế độ khách. Đăng nhập để đồng bộ dữ liệu và sử dụng đầy đủ tính năng.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         {/* Error alert */}
         {error && (

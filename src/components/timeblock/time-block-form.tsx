@@ -28,6 +28,8 @@ import { TimeBlockService } from '@/lib/services/time-block-service';
 import { TaskSelector } from '../task/task-selector';
 import { Loader2 } from 'lucide-react';
 import { useStatisticsRefresh } from '@/lib/contexts/statistics-context';
+import { useAuthAction } from '@/lib/hooks/use-auth-action';
+import { AuthDialog } from '@/components/auth/auth-dialog';
 
 interface TimeBlockFormProps {
   isOpen: boolean;
@@ -53,6 +55,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function TimeBlockForm({ isOpen, onClose, onUpdate, date, timeBlock }: TimeBlockFormProps) {
   const refreshStatistics = useStatisticsRefresh();
+  const { executeWithAuth, showAuthDialog, setShowAuthDialog } = useAuthAction();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -89,44 +92,46 @@ export function TimeBlockForm({ isOpen, onClose, onUpdate, date, timeBlock }: Ti
   }, [timeBlock, form, todayStr]);
   
   const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      if (isEditing && timeBlock) {
-        // Cập nhật time block hiện có
-        await TimeBlockService.updateTimeBlock({
-          ...timeBlock,
-          title: values.title,
-          startTime: new Date(values.startTime).toISOString(),
-          endTime: new Date(values.endTime).toISOString(),
-          taskId: values.taskId === 'none' ? null : values.taskId,
-        });
-      } else {
-        // Tạo time block mới (không gửi id)
-        const taskId = values.taskId === 'none' || values.taskId === '' ? null : values.taskId;
-        console.log('TimeBlockForm: Tạo time block với taskId:', taskId);
+    await executeWithAuth(async () => {
+      setIsLoading(true);
+      setError(null);
 
-        await TimeBlockService.createTimeBlock({
-          title: values.title,
-          startTime: new Date(values.startTime).toISOString(),
-          endTime: new Date(values.endTime).toISOString(),
-          isCompleted: false,
-          taskId: taskId,
-        });
+      try {
+        if (isEditing && timeBlock) {
+          // Cập nhật time block hiện có
+          await TimeBlockService.updateTimeBlock({
+            ...timeBlock,
+            title: values.title,
+            startTime: new Date(values.startTime).toISOString(),
+            endTime: new Date(values.endTime).toISOString(),
+            taskId: values.taskId === 'none' ? null : values.taskId,
+          });
+        } else {
+          // Tạo time block mới (không gửi id)
+          const taskId = values.taskId === 'none' || values.taskId === '' ? null : values.taskId;
+          console.log('TimeBlockForm: Tạo time block với taskId:', taskId);
+
+          await TimeBlockService.createTimeBlock({
+            title: values.title,
+            startTime: new Date(values.startTime).toISOString(),
+            endTime: new Date(values.endTime).toISOString(),
+            isCompleted: false,
+            taskId: taskId,
+          });
+        }
+
+        // Trigger statistics refresh
+        refreshStatistics();
+
+        onUpdate();
+        onClose();
+      } catch (error) {
+        console.error('Lỗi khi lưu khối thời gian:', error);
+        setError('Có lỗi xảy ra khi lưu khối thời gian. Vui lòng thử lại.');
+      } finally {
+        setIsLoading(false);
       }
-
-      // Trigger statistics refresh
-      refreshStatistics();
-
-      onUpdate();
-      onClose();
-    } catch (error) {
-      console.error('Lỗi khi lưu khối thời gian:', error);
-      setError('Có lỗi xảy ra khi lưu khối thời gian. Vui lòng thử lại.');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
   
   return (
@@ -234,5 +239,12 @@ export function TimeBlockForm({ isOpen, onClose, onUpdate, date, timeBlock }: Ti
         </Form>
       </DialogContent>
     </Dialog>
+
+    <AuthDialog
+      open={showAuthDialog}
+      onOpenChange={setShowAuthDialog}
+      title="Yêu cầu đăng nhập"
+      description="Bạn cần đăng nhập để tạo hoặc chỉnh sửa khối thời gian."
+    />
   );
 }
