@@ -102,7 +102,7 @@ export const ProjectService = {
       console.log('ProjectService: Đang tải tasks của project...', projectId);
 
       // Sử dụng constants từ ApiService
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://qltimebe.onrender.com/api';
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',

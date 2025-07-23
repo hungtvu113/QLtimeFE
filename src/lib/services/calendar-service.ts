@@ -42,7 +42,7 @@ export const CalendarService = {
       if (end) params.append('end', end);
       
       const url = `/calendar/events${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/calendar/events${params.toString() ? `?${params.toString()}` : ''}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://qltimebe.onrender.com'}/api/calendar/events${params.toString() ? `?${params.toString()}` : ''}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json',
@@ -67,7 +67,7 @@ export const CalendarService = {
     try {
       console.log('CalendarService: Đang tải dữ liệu ngày...', date);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/calendar/day/${date}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://qltimebe.onrender.com'}/api/calendar/day/${date}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export const CalendarService = {
     try {
       console.log('CalendarService: Đang tải dữ liệu tuần...', date);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/calendar/week/${date}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://qltimebe.onrender.com'}/api/calendar/week/${date}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json',

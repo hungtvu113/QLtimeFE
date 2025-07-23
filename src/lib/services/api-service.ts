@@ -1,7 +1,7 @@
 import { Task, Category, TimeBlock, Preference, Note, Project } from '../types';
 
 // URL cơ sở cho API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://qltimebe.onrender.com/api';
 
 // Hàm trợ giúp để xử lý lỗi từ phản hồi fetch
 const handleResponse = async (response: Response) => {
